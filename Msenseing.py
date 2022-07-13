@@ -50,6 +50,7 @@ class AlphaMoSeEnv(gym.Env):
         self.max_step=MaxStep
         
         self.episode_idx=0
+        self.step_idx=0
         self.global_time=0.0
 
         #get max and min of coordinates
@@ -148,6 +149,7 @@ class AlphaMoSeEnv(gym.Env):
 
     #this function returns a variable value for a given location at a given time point
     #for spatial dimension, instead of interpolation, a variable value of the nearest point is returned as the measured value of the given location
+    #nearest-neighbor interpolation
     #for temporal dimension, interpolation result is returned as the measured value of the given location if the given time point does not match the PFdata temporal resolution
     def _measure(self, location_coor, time_point):
         #a square region with its centre being the given point and its half width being delta_mea is defined and points within the region are collected
