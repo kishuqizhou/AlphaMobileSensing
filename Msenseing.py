@@ -50,7 +50,6 @@ class AlphaMoSeEnv(gym.Env):
         self.max_step=MaxStep
         
         self.episode_idx=0
-        self.step_idx=0
         self.global_time=0.0
 
         #get max and min of coordinates
@@ -67,7 +66,7 @@ class AlphaMoSeEnv(gym.Env):
             
 
         #define the action space and state space
-        #move-1, Stop-0
+        #continue-1, Stop-0
         self.action_names=['x_velocity', 'y_velocity', 'moving time', 'Continue/Stop']
         self.action_low=np.array([-self.maxvelocity, -self.maxvelocity, 0, 0])
         self.action_high=np.array([self.maxvelocity, self.maxvelocity, 100, 1])
@@ -180,7 +179,7 @@ class AlphaMoSeEnv(gym.Env):
     #2.if there hava points in each quadrant, the given point is considered as 'in the domain'
     #3.if at least one quadrant is empty, the given point is considered as 'outside the domain or on the domain boundary'
     def _whether_in_domain(self, location_coor):
-        delta=1.0
+        delta=1.5
         judge_array=[0,0,0,0]
         window_data=self.stdata.loc[(self.stdata['X']>(location_coor[0]-delta)) & (self.stdata['X']<(location_coor[0]+delta)) & 
         (self.stdata['Y']>(location_coor[1]-delta)) & (self.stdata['Y']<(location_coor[1]+delta)), ['X', 'Y']]
