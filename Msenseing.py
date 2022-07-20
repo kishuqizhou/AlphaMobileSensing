@@ -8,15 +8,16 @@ import os
 class AlphaMoSeEnv(gym.Env):
     '''
     AlphaMoSeEnv is a custom Gym Environment
-    Args:
+    Input Parameters:
     - PFdataPath: string, path of physical field data
-    - GTimeHorizon: int, time horizon of physical field, unit: s
-    - GTimeStepsize: int, time step size of physical field, unit: s
-    - MeasureTime: int, time required for measurement at one location, unit: s
-    - IniLoc: tuple, initial location of robot, unit: m
-    - MaxVel: float, max moving velocity of robot, unit: m/s
-    - CostWeight: tuple, (distance_weight, time_weight), weight to calculate reward
-    - MaxStep: int, max moving step, default: 1e5
+    - PFTHorizon: int, time horizon of a physical field, unit: s
+    - PFTStepsize: int, time step size of a physical field, unit: s
+    - MeaDuration: int, time required by a robot to measure physical variables at a location, unit: s
+    - IniLocation: tuple, initial location of a robot, unit: m
+    - MaxSpeed: float, maximum moving speed of a robot, unit: m/s, default: 2.0
+    - CostWeight: tuple, (distance_weight, time_weight), 
+      weight between moving distance and moving time to compute reward, default: (0.5, 0.5)
+    - MaxStep: int, maximum number of steps for an episode, default: 1e3
     
     Action space:
     - continuous space: 
@@ -26,9 +27,9 @@ class AlphaMoSeEnv(gym.Env):
     
     Observation space:
     - continuous space: 
-    x and y coordinates of the location where the robot is
-    the global time that the measurement is finished at that location
-    the measured variable value at that location
+    x and y coordinates of a location where the robot is
+    global time that the measurement is finished at that location
+    measured variable value at that location
 
     The environment is valid for both static and dynamic physical fields because their data structure are identical
     The static field data also has a temporal dimension but variable values do not variate with time
@@ -38,14 +39,14 @@ class AlphaMoSeEnv(gym.Env):
     metadata={'render.modes': ['human']}
 
 
-    def __init__(self, PFdataPath, GTimeHorizon, GTimeStepSize, 
-        MeasureTime, IniLoc, MaxVel, CostWeight, MaxStep=1e5):
+    def __init__(self, PFdataPath, PFTHorizon, PFTStepSize, 
+        MeaDuration, IniLocation, MaxSpeed=2.0, CostWeight=(0.5,0.5), MaxStep=1e3):
         self.stdata=pd.read_csv(PFdataPath)
-        self.global_timehorizon=GTimeHorizon
-        self.global_timestepsize=GTimeStepSize
-        self.measure_time=MeasureTime
-        self.initial_location=IniLoc
-        self.maxvelocity=MaxVel
+        self.global_timehorizon=PFTHorizon
+        self.global_timestepsize=PFTStepSize
+        self.measure_time=MeaDuration
+        self.initial_location=IniLocation
+        self.maxvelocity=MaxSpeed
         self.cost_weight=CostWeight
         self.max_step=MaxStep
         
@@ -195,7 +196,7 @@ class AlphaMoSeEnv(gym.Env):
     #the user can determine how many points and at which time point for accuracy evaluation
     #the function will randomly sample n points in the physical field and save as a ground truth
     #the user needs to fill in the template with their prediction results 
-    def request_evauation_template(self):
+    def request_evaluation(self):
         self.sampling_number=int(input('Please input sampling number:'))
         self.target_time=float(input('Please input target time:'))
         self.template_path=input('Please input a path for template export:') #e.g. C:/desktop/evaluation_template.csv
