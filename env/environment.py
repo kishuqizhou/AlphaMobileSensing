@@ -8,22 +8,31 @@ import os
 class AlphaMoSeEnv(gym.Env):
     '''
     AlphaMoSeEnv is a custom Gym Environment
+
+    Version 2.0
+    Improvements in this version:
+    * Add a functionality of stationary sensing (def stationary_sensing())
+    * Add an evaluation metrics Mean Absolute Error
+    * Support mobile sensing with multiple robots
+
     Input Parameters:
     - PFdataPath: string, path of physical field data
     - PFTHorizon: int, time horizon of a physical field, unit: s
     - PFTStepsize: int, time step size of a physical field, unit: s
-    - MeaDuration: int, time required by a robot to measure physical variables at a location, unit: s
-    - IniLocation: tuple, initial location of a robot, unit: m
-    - MaxSpeed: float, maximum moving speed of a robot, unit: m/s, default: 2.0
     - CostWeight: tuple, (distance_weight, time_weight), 
       weight between moving distance and moving time to compute reward, default: (0.5, 0.5)
     - MaxStep: int, maximum number of steps for an episode, default: 1e3
+    - AgentNumber: int, number of robots utilized in mobile sensing
+    - MeaDuration: int, time required by a robot to measure physical variables at a location, unit: s, (required to be specified for each robot, e.g., (5.0, 5.0, 5.0) for three robots, (5.0, ) for single robot)
+    - IniLocation: tuple, initial location of a robot, unit: m, (required to be specified for each robot, e.g., ((1.0,2.0),(2.0,3.0),(3.0,3.0)) for three robots, ((1.0,2.0),) for single robot)
+    - MaxSpeed: float, maximum moving speed of a robot, unit: m/s, default: 2.0, (required to be specified for each robot, e.g., (2.0, 2.0, 2.0) for three robots, (2.0, ) for single robot)
+    
     
     Action space:
     - continuous space: 
     robot moving velocities in x and y directions
     robot moving time
-    robot moving command (continue / stop)
+    Execution command (continue / stop)
     
     Observation space:
     - continuous space: 
@@ -40,18 +49,22 @@ class AlphaMoSeEnv(gym.Env):
 
 
     def __init__(self, PFdataPath, PFTHorizon, PFTStepSize, 
-        MeaDuration, IniLocation, MaxSpeed=2.0, CostWeight=(0.5,0.5), MaxStep=1e3):
+        CostWeight=(0.5,0.5), MaxStep=1e3, AgentNumber, MeaDuration, IniLocation, MaxSpeed):
         self.stdata=pd.read_csv(PFdataPath)
         self.global_timehorizon=PFTHorizon
         self.global_timestepsize=PFTStepSize
+        self.cost_weight=CostWeight
+        self.max_step=MaxStep
+        self.agent_number=AgentNumber
         self.measure_time=MeaDuration
         self.initial_location=IniLocation
         self.maxvelocity=MaxSpeed
-        self.cost_weight=CostWeight
-        self.max_step=MaxStep
+       
+        #judge whether each robot has its setting
+        assert True not in (self.agent_number!=len(self.measure_time), self.agent_number!=len(self.initial_location), self.agent_number!=len(self.maxvelocity)), 'Missing parameter in agent setup'
         
         self.episode_idx=0
-        self.global_time=0.0
+        self.agent_global_time=np.zeros(self.agent_number)
 
         #get max and min of coordinates
         #in PFdata csv: 
@@ -60,12 +73,14 @@ class AlphaMoSeEnv(gym.Env):
         self.domYmin, self.domYmax = np.min(self.stdata['Y']), np.max(self.stdata['Y'])
 
         #judge whether the initial location is in the domain or not
-        self._whether_in_domain(self.initial_location)
+        for i in range(self.agent_number):
+            self._whether_in_domain(self.initial_location[i])
 
         #as the initial location is in the domain, obtain the variable value of the initial location
-        self.ini_var=self._measure(self.initial_location, self.global_time)
-            
-
+        self.ini_var=[]
+        for i in range(self.agent_number):
+            self.ini_var.append(self._measure(self.initial_location[i], self.agent_global_time[i]))
+        
         #define the action space and state space
         #continue-1, Stop-0
         self.action_names=['x_velocity', 'y_velocity', 'moving time', 'Continue/Stop']
@@ -81,16 +96,21 @@ class AlphaMoSeEnv(gym.Env):
 
     def reset(self):
         self.episode_idx+=1
-        self.global_time=0.0
+        self.agent_global_time=np.zeros(self.agent_number)
         self.step_idx=0
-        self.total_moving_distance=0
-        self.total_moving_time=0
-        self.action=np.zeros(len(self.action_names))
-        self.obs=np.zeros(len(self.obs_names))
-        for i in range(2):
-            self.obs[i]=self.initial_location[i]
-        self.obs[2]=self.global_time
-        self.obs[3]=self.ini_var
+        self.agent_total_moving_distance=np.zeros(self.agent_number)
+        self.agent_total_moving_time=np.zeros(self.agent_number)
+        self.action=[]
+        self.obs=[]
+        for i in range(self.agent_number):
+            self.action.append(np.zeros(len(self.action_names)))
+            self.obs.append(np.zeros(len(self.obs_names)))
+        
+        for i in range(self.agent_number):
+            for j in range(2):
+                self.obs[i][j]=self.initial_location[i][j]
+            self.obs[i][2]=self.agent_global_time[i]
+            self.obs[i][3]=self.ini_var[i]
 
         return self.obs
 
@@ -98,54 +118,75 @@ class AlphaMoSeEnv(gym.Env):
     def step(self, action):
         self.step_idx+=1
         self.action=action
-        #if the moving command is 'Stop', the current episode is terminated
-        if self.action[3]==0:
+        #if the command of any agent is 'Stop', the current episode is terminated
+        command=np.ones(self.agent_number)
+        for i in range(self.agent_number):
+            command[i]=self.action[i][3]
+        
+        if 0 in command:
             done=True
             self.render()
 
-            return done, {'Total moving distance': self.total_moving_distance,
-                                            'Total moving time': self.total_moving_time,
-                                            'Steps': self.step_idx-1}
-
-        #if the moving command is 'Continue', the current episode will continue 
+            return done, {'Total moving distance of each agent': self.agent_total_moving_distance, 
+                                'Total moving time of each agent': self.agent_total_moving_time,
+                                'Steps': self.step_idx-1}
+        #if the moving command is 'Continue', the current episode will continue
         else:
-            self.global_time=self.global_time+self.action[2]+self.measure_time
-            self.obs[2]=self.global_time
+            for i in range(self.agent_number):
+                self.agent_global_time[i]=self.agent_global_time[i]+self.action[i][2]+self.measure_time[i]
+                self.obs[i][2]=self.agent_global_time[i]
             self._take_action()
             reward=self._compute_reward()
 
             #the current episode will not be terminated untill the max step or the end of global time horizon is reached
-            if (self.step_idx < self.max_step) and (self.global_time < self.global_timehorizon):
+            if (self.step_idx < self.max_step) and (np.max(self.agent_global_time) < self.global_timehorizon):
                 done=False
             else:
                 done=True
                 self.render()
 
-            return self.obs, reward, done, {'Total moving distance': self.total_moving_distance,
-                                            'Total moving time': self.total_moving_time,
+            return self.obs, reward, done, {'Total moving distance of each agent': self.agent_total_moving_distance,
+                                            'Total moving time of each agent': self.agent_total_moving_time,
                                             'Steps': self.step_idx}
 
 
     def _take_action(self):
-        #x=x+Ux*t
-        self.obs[0]=self.obs[0]+self.action[0]*self.action[2]
-        #y=y+Uy*t
-        self.obs[1]=self.obs[1]+self.action[1]*self.action[2]
-        #obtain variable value of point (x,y) at t_global
-        self.obs[3]=self._measure((self.obs[0], self.obs[1]), self.obs[2])
+        for i in range(self.agent_number):
+            #x=x+Ux*t
+            self.obs[i][0]=self.obs[i][0]+self.action[i][0]*self.action[i][2]
+            #y=y+Uy*t
+            self.obs[i][1]=self.obs[i][1]+self.action[i][1]*self.action[i][2]
+            #obtain variable value of point (x,y) at t_global of agent i
+            self.obs[i][3]=self._measure((self.obs[i][0], self.obs[i][1]), self.obs[i][2])
 
 
     def _compute_reward(self):
-        #calculate the moving distance and moving time of the current step
-        moving_distance=np.sqrt((self.action[0]*self.action[2])**2+(self.action[1]*self.action[2])**2)
-        moving_time=self.action[2]
-        #cost is a weighted sum of moving distance and moving time
-        cost=moving_distance*self.cost_weight[0]+moving_time*self.cost_weight[1]
-        #total moving distance and total moving time
-        self.total_moving_distance+=moving_distance
-        self.total_moving_time+=moving_time
-    
+
+        #moving distance / time of each agent in the current step
+        agent_moving_distance=np.zeros(self.agent_number)
+        agent_moving_time=np.zeros(self.agent_number)
+        #sum of moving distance / time of all agents in the current step
+        moving_distance=0
+        moving_time=0
+        #reward of each agent in the current step
+        cost=[]
+
+        for i in range(self.agent_number):
+            #calculate the moving distance and moving time of the current step
+            agent_moving_distance[i]=np.sqrt((self.action[i][0]*self.action[i][2])**2+(self.action[i][1]*self.action[i][2])**2)
+            agent_moving_time[i]=self.action[i][2]
+            self.agent_total_moving_distance[i]+=agent_moving_distance[i]
+            self.agent_total_moving_time[i]+=agent_moving_time[i]
+            moving_distance+=agent_moving_distance[i]  
+            moving_time+=agent_moving_time[i]
+            #for each agent, cost(reward) is a weighted sum of moving distance and moving time
+            cost.append(agent_moving_distance[i]*self.cost_weight[0]+agent_moving_time[i]*self.cost_weight[1])
+            
+            #if consider all agents, then the cost (reward) will be:
+        #cost=moving_distance*self.cost_weight[0]+moving_time*self.cost_weight[1]     
+        
         return cost 
+
 
     #this function returns a variable value for a given location at a given time point
     #for spatial dimension, instead of interpolation, a variable value of the nearest point is returned as the measured value of the given location
@@ -226,22 +267,52 @@ class AlphaMoSeEnv(gym.Env):
             sampling_template.to_csv(self.template_path)
 
 
-    #root mean square error (RMSE) between user's prediction results and the ground truth is computed as an index for accuracy evaluation
+    #root mean square error (RMSE) and mean absolute error (MAE) between user's prediction results and the ground truth are computed as indexes for accuracy evaluation
     def compute_accuracy(self):
         assert os.path.exists(self.template_path), 'Please request a template first!'
 
         results=pd.read_csv(self.template_path)['{}'.format(self.target_time)]
         ground_truth=self.sampling_info['{}'.format(self.target_time)]
         sum_sq=0
+        sum_ae=0
         for i in range(self.sampling_number):
             sum_sq+=(results.iloc[i]-ground_truth.iloc[i])**2
+            sum_ae+=np.abs(results.iloc[i]-ground_truth.iloc[i])
         rmse=np.sqrt(sum_sq/self.sampling_number)
+        mae=sum_ae/self.sampling_number
 
-        return rmse
+        return {'Root mean square error':rmse, 'Mean absolute error':mae}
+
+
+    #this function allows users to set a sensor network to retrieve stationary sensing results which can be used to compare with mobile sensing results 
+    #users are required to specify sensor number, coordinates of each sensor, and a sampling interval
+    def stationary_monitoring(self):
+        sensor_number=int(input('Please input stationary sensor number number:'))
+        sensor_coor=np.zeros((sensor_number,2))
+        sensor_log=['time']
+        for i in range(sensor_number):
+            sensor_coor[i,0]=float(input('Please input X coordinate of sensor #{}:'.format(i+1)))
+            sensor_coor[i,1]=float(input('Please input Y coordinate of sensor #{}:'.format(i+1)))
+            sensor_log.append('sensor #{}'.format(i+1))
+        df_sensor_coor=pd.DataFrame(sensor_coor, index=np.arange(1,sensor_number+1,1),columns=['X coordinate', 'Y coordinate'])
+
+        sampling_interval=float(input('Please input sampling interval:'))
+        sampling_time=np.arange(0, self.global_timehorizon, sampling_interval)
+
+        sampling_log=np.zeros((len(sampling_time), sensor_number+1))
+        for i in range(len(sampling_time)):
+            sampling_log[i,0]=sampling_time[i]
+            for j in range(sensor_number):
+                sampling_log[i,j+1]=self._measure((sensor_coor[j,0], sensor_coor[j,1]), sampling_time[i])
+
+        stationary_monitoring_results=pd.DataFrame(sampling_log, columns=sensor_log)
+
+        return df_sensor_coor, stationary_monitoring_results
+
 
     def render(self, mode='human', close=False):
         print('Episode: {}'.format(self.episode_idx))
-        print('Total moving distance (m)')
-        print(self.total_moving_distance)
-        print('Total moving time (s)')
-        print(self.total_moving_time)
+        print('Total moving distance of each agent (m)')
+        print(self.agent_total_moving_distance)
+        print('Total moving time of each agent (s)')
+        print(self.agent_total_moving_time)
