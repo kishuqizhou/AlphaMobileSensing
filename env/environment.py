@@ -49,7 +49,7 @@ class AlphaMoSeEnv(gym.Env):
 
 
     def __init__(self, PFdataPath, PFTHorizon, PFTStepSize, 
-        CostWeight=(0.5,0.5), MaxStep=1e3, AgentNumber, MeaDuration, IniLocation, MaxSpeed):
+        AgentNumber, MeaDuration, IniLocation, MaxSpeed, CostWeight=(0.5,0.5), MaxStep=1e3):
         self.stdata=pd.read_csv(PFdataPath)
         self.global_timehorizon=PFTHorizon
         self.global_timestepsize=PFTStepSize
