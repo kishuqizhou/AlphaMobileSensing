@@ -118,19 +118,20 @@ class AlphaMoSeEnv(gym.Env):
     def step(self, action):
         self.step_idx+=1
         self.action=action
-        #if the command of any agent is 'Stop', the current episode is terminated
+        #if the command of all agent is 'Stop', the current episode is terminated
         command=np.ones(self.agent_number)
         for i in range(self.agent_number):
             command[i]=self.action[i][3]
         
-        if 0 in command:
+        if command.any()==0:
             done=True
             self.render()
 
             return done, {'Total moving distance of each agent': self.agent_total_moving_distance, 
                                 'Total moving time of each agent': self.agent_total_moving_time,
                                 'Steps': self.step_idx-1}
-        #if the moving command is 'Continue', the current episode will continue
+        #if the command is 'Continue', the current episode will continue
+        #for agent receiving 'Stop' command, it will take an 'action' [0, 0, 0, 0]
         else:
             for i in range(self.agent_number):
                 self.agent_global_time[i]=self.agent_global_time[i]+self.action[i][2]+self.measure_time[i]
