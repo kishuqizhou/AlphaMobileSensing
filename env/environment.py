@@ -135,17 +135,17 @@ class AlphaMoSeEnv(gym.Env):
         else:
             for i in range(self.agent_number):
                 self.agent_global_time[i]=self.agent_global_time[i]+self.action[i][2]+self.measure_time[i]
-                self.obs[i][2]=self.agent_global_time[i]
+                #the current episode will be terminated if global time of any agent reaches global time horizon or the maximum step is reached
+                if (self.agent_global_time[i] < self.global_timehorizon) and (self.step_idx < self.max_step):
+                    self.obs[i][2]=self.agent_global_time[i]
+                else:
+                    done=True
+                    self.render()
+                    return done, {'Total moving distance of each agent': self.agent_total_moving_distance, 
+                                'Total moving time of each agent': self.agent_total_moving_time,
+                                'Steps': self.step_idx-1}
             self._take_action()
             reward=self._compute_reward()
-
-            #the current episode will not be terminated untill the max step or the end of global time horizon is reached
-            if (self.step_idx < self.max_step) and (np.max(self.agent_global_time) < self.global_timehorizon):
-                done=False
-            else:
-                done=True
-                self.render()
-
             return self.obs, reward, done, {'Total moving distance of each agent': self.agent_total_moving_distance,
                                             'Total moving time of each agent': self.agent_total_moving_time,
                                             'Steps': self.step_idx}
