@@ -9,7 +9,7 @@ class AlphaMoSeEnv(gym.Env):
     '''
     AlphaMoSeEnv is a custom Gym Environment
 
-    Version 2.0
+    Version 2.0 (Feb, 2023)
     Improvements in this version:
     * Add a functionality of stationary sensing (def stationary_sensing())
     * Add an evaluation metrics Mean Absolute Error
@@ -19,14 +19,13 @@ class AlphaMoSeEnv(gym.Env):
     - PFdataPath: string, path of physical field data
     - PFTHorizon: int, time horizon of a physical field, unit: s
     - PFTStepsize: int, time step size of a physical field, unit: s
-    - CostWeight: tuple, (distance_weight, time_weight), 
-      weight between moving distance and moving time to compute reward, default: (0.5, 0.5)
-    - MaxStep: int, maximum number of steps for an episode, default: 1e3
     - AgentNumber: int, number of robots utilized in mobile sensing
     - MeaDuration: int, time required by a robot to measure physical variables at a location, unit: s, (required to be specified for each robot, e.g., (5.0, 5.0, 5.0) for three robots, (5.0, ) for single robot)
     - IniLocation: tuple, initial location of a robot, unit: m, (required to be specified for each robot, e.g., ((1.0,2.0),(2.0,3.0),(3.0,3.0)) for three robots, ((1.0,2.0),) for single robot)
-    - MaxSpeed: float, maximum moving speed of a robot, unit: m/s, default: 2.0, (required to be specified for each robot, e.g., (2.0, 2.0, 2.0) for three robots, (2.0, ) for single robot)
-    
+    - MaxSpeed: float, maximum moving speed of each robot, unit: m/s, default: 2.0
+    - CostWeight: tuple, (distance_weight, time_weight), 
+      weight between moving distance and moving time to compute reward, default: (0.5, 0.5)
+    - MaxStep: int, maximum number of steps for an episode, default: 1e3
     
     Action space:
     - continuous space: 
@@ -61,7 +60,7 @@ class AlphaMoSeEnv(gym.Env):
         self.maxvelocity=MaxSpeed
        
         #judge whether each robot has its setting
-        assert True not in (self.agent_number!=len(self.measure_time), self.agent_number!=len(self.initial_location), self.agent_number!=len(self.maxvelocity)), 'Missing parameter in agent setup'
+        assert True not in (self.agent_number!=len(self.measure_time), self.agent_number!=len(self.initial_location)), 'Agent parameter and agent number do not match!'
         
         self.episode_idx=0
         self.agent_global_time=np.zeros(self.agent_number)
@@ -146,6 +145,7 @@ class AlphaMoSeEnv(gym.Env):
                                 'Steps': self.step_idx-1}
             self._take_action()
             reward=self._compute_reward()
+            done=False
             return self.obs, reward, done, {'Total moving distance of each agent': self.agent_total_moving_distance,
                                             'Total moving time of each agent': self.agent_total_moving_time,
                                             'Steps': self.step_idx}
