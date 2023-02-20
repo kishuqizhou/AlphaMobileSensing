@@ -133,14 +133,20 @@ class AlphaMoSeEnv(gym.Env):
         #for agent receiving 'Stop' command, it will take an 'action' [0, 0, 0, 0]
         else:
             for i in range(self.agent_number):
-                self.agent_global_time[i]=self.agent_global_time[i]+self.action[i][2]+self.measure_time[i]
-                #the current episode will be terminated if global time of any agent reaches global time horizon or the maximum step is reached
-                if (self.agent_global_time[i] < self.global_timehorizon) and (self.step_idx < self.max_step):
+                if command[i]==0:
+                    self.action[i][0]=0
+                    self.action[i][1]=0
+                    self.action[i][2]=0
                     self.obs[i][2]=self.agent_global_time[i]
                 else:
-                    done=True
-                    self.render()
-                    return done, {'Total moving distance of each agent': self.agent_total_moving_distance, 
+                    self.agent_global_time[i]=self.agent_global_time[i]+self.action[i][2]+self.measure_time[i]
+                    #the current episode will be terminated if global time of any agent reaches global time horizon or the maximum step is reached
+                    if (self.agent_global_time[i] < self.global_timehorizon) and (self.step_idx < self.max_step):
+                        self.obs[i][2]=self.agent_global_time[i]
+                    else:
+                        done=True
+                        self.render()
+                        return done, {'Total moving distance of each agent': self.agent_total_moving_distance, 
                                 'Total moving time of each agent': self.agent_total_moving_time,
                                 'Steps': self.step_idx-1}
             self._take_action()
