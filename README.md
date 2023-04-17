@@ -4,7 +4,8 @@
  > *Zhou Q., Zhong H., Li L. and Wang, Z., 2023. AlphaMobileSensing: A virtual testbed for mobile environmental monitoring. Building Simulation*
  [[paper]](https://doi.org/10.1007/s12273-023-1001-9)
  
- AlphaMobileSensing is updating contineously. The new version is now available.
+ AlphaMobileSensing keeps updating contineously. The new version (version 2) is now available.
+ The work demonstrated in the paper was based on AlphaMobileSensing version 1 (v1). To reproduce the work in the paper, please use files with the suffix 'v1'.
 
 # Overview
 Environmental monitoring plays a critical role in creating and maintaining a comfortable, productive, and healthy environment. Built upon the advancements of robotics and data processing, mobile sensing demonstrates its potential to address problems regarding cost, deployment, and resolution that stationary monitoring encounters, which therefore has attracted increasing research attentions recently.
