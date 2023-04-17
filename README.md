@@ -14,18 +14,18 @@ For versatility and flexibility, AlphaMobileSensing was wrapped up using the sta
 # Workflow
 To help users understand the simulation process, we demonstrated a flowchart as belows. 
 
-<img src="docs/fig/Flowchart.png" width="1000" />
+<img src="docs/fig/Flowchart.png" width="800" />
 
 The virtual environment loads an input file that contains physical field information for the mobile agent to sense. The physical field information can be obtained via numerical simulations or field measurements, which could depend on the data availability and research objective. Next, the user is required to input the parameter values to initialize an instance of the virtual environment AlphaMobileSensing. These parameters include the attributes of the physical field, control agent, and the virtual environment. Mobile sensing algorithm that needs testing or evaluation can be implemented in a separate file, which is then imported into AlphaMobileSensing for the control agent to interface with the physical field. The simulation will keep running until a termination signal (e.g., reach the maximum simulation step) is received. As the simulation terminates, the user can request a performance evaluation on the algorithm. The virtual environment will compute a performance metrics and return it to the user. Based on the performance evaluation result, the user can choose to revise the algorithm and repeat the simulation process or finish the test.
 
 The architecture of AlphaMobileSensing is shown as belows. We defined AlphaMobileSensing as a custom OpenAI Gym environment by inheriting a standard Gym class and created further methods to realize different functionalities. Both public and private methods were created in the environment. In addition, we defined several input attributes that
 require assigning values when the virtual environment is instantiated. It is highly flexible for users to assign parameter values for different test scenarios.
 
-<img src="docs/fig/Systematic Figure.png" width="1000" />
+<img src="docs/fig/Systematic Figure.png" width="800" />
 
 # Feedback
 
-If you have any feedback, feel free to contact: [Zhe Wang](mailto:cezhewang@ust.hk) or [Qi Zhou](mailto:qizhou@ust.hk)
+If you have any feedback, feel free to contact: [Qi Zhou](mailto:qizhou@ust.hk) or [Zhe Wang](mailto:cezhewang@ust.hk)
 
 
 
