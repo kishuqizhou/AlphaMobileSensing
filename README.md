@@ -27,6 +27,7 @@ require assigning values when the virtual environment is instantiated. It is hig
 # Release notes
 
 version 2.0 (Feb 2023)
+
 New Features:
 - Add a functionality of stationary sensing (def stationary_sensing())
 - Add an evaluation metrics Mean Absolute Error
