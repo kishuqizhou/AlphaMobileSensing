@@ -1,7 +1,7 @@
 # AlphaMobileSensing
  This is an official repository of AlphaMobileSensing, an innovative virtual testbed for developing, testing, and benchmarking mobile sensing algorithms. 
  Please refer to the following paper for a detailed introduction of AlphaMobileSensing:
- > *Zhou Q., Zhong H., Li L. and Wang, Z., 2023. AlphaMobileSensing: A virtual testbed for mobile environmental monitoring. Building Simulation*
+ > *Zhou, Q., Zhong, H., Li, L. and Wang, Z., 2023. AlphaMobileSensing: A virtual testbed for mobile environmental monitoring. Building Simulation*
  [[paper]](https://doi.org/10.1007/s12273-023-1001-9)
  
  AlphaMobileSensing keeps updating contineously. The new version (version 2) is now available.
@@ -23,6 +23,16 @@ The architecture of AlphaMobileSensing is shown as belows. We defined AlphaMobil
 require assigning values when the virtual environment is instantiated. It is highly flexible for users to assign parameter values for different test scenarios.
 
 <img src="docs/fig/Systematic Figure.png" width="500" />
+
+# Release notes
+
+version 2.0 (Feb 2023)
+New Features:
+- Add a functionality of stationary sensing (def stationary_sensing())
+- Add an evaluation metrics Mean Absolute Error
+- Support mobile sensing with multiple robots
+
+version 1.0 (Jul 2022)
 
 # Feedback
 
